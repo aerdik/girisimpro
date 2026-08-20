@@ -6,12 +6,14 @@ import datetime
 from fpdf import FPDF
 import tempfile
 
-# --- PDF OLUŞTURUCU ---
+# --- TÜRKÇE KARAKTER DESTEKLİ PDF OLUŞTURUCU ---
 def rapor_pdf_olustur(fikir, rakip, risk, strateji, sentez):
     pdf = FPDF()
     pdf.add_page()
+    
     pdf.add_font("Arial", "", "C:\\Windows\\Fonts\\arial.ttf", uni=True)
     pdf.add_font("Arial", "B", "C:\\Windows\\Fonts\\arialbd.ttf", uni=True)
+    
     pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 10, "Yapay Zeka Girisim Analiz Raporu", ln=True, align="C")
     pdf.ln(5)
@@ -50,16 +52,18 @@ def canli_arama_yap(sorgu):
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="Girişim Analizörü Pro", page_icon="📈", layout="centered")
 
-# --- KULLANICI GİZLİ API ANAHTARI (YAN MENÜ) ---
+# --- YAN MENÜ (API GİRİŞİ VE GEÇMİŞ) ---
 with st.sidebar:
     st.header("⚙️ Ayarlar & API")
     groq_key = st.text_input("Groq API Key Girin:", type="password", help="console.groq.com adresinden ücretsiz alabilirsiniz.")
     st.markdown("---")
     st.header("📚 Geçmiş Analizler")
+    st.write("Daha önce test ettiğiniz fikirler.")
+    st.markdown("---")
     
     if 'gecmis' not in st.session_state:
         st.session_state.gecmis = []
-        
+    
     if len(st.session_state.gecmis) == 0:
         st.info("Henüz analiz yapılmadı.")
     else:
@@ -71,8 +75,9 @@ with st.sidebar:
 
 # --- ANA EKRAN ---
 st.title("📈 Yapay Zeka Girişim Analizörü")
-st.write("Fikrinizi anlatın; bulut tabanlı yapay zeka ekibimiz pazar potansiyelini ve riskleri anında raporlasın.")
+st.write("Fikrinizi anlatın; yapay zeka ekibimiz pazar potansiyelini, riskleri ve başarı puanını anında raporlasın.")
 
+# Parametre Seçimleri
 sektor = st.selectbox("Sektör Seçin:", ["Yazılım / Teknoloji", "E-Ticaret / Perakende", "Turizm / Seyahat", "Gıda / Tarım", "Eğitim / Danışmanlık", "Diğer"])
 butce = st.selectbox("Başlangıç Bütçesi:", ["Düşük (Bootstrap / Öz Sermaye)", "Orta (Melek Yatırım / KOBİ)", "Yüksek (Kurumsal / VC Yatırımı)"])
 dil = st.selectbox("Rapor Dili:", ["Türkçe", "İngilizce"])
@@ -81,11 +86,10 @@ kullanici_fikri = st.text_area("İş Fikrinizi Detaylıca Anlatın:", height=130
 
 if st.button("🚀 Analizi ve Puanlamayı Başlat", type="primary", use_container_width=True):
     if not groq_key:
-        st.error("Lütfen sol menüden Groq API anahtarınızı girin! (Ücretsizdir)")
+        st.error("Lütfen sol menüden Groq API anahtarınızı girin!")
     elif kullanici_fikri:
         with st.spinner('Pazar taranıyor, bulut ajanlar çalışıyor...'):
-            # Groq modelini bağlıyoruz (Llama 3 70b veya 8b - dünyanın en hızlı açık kaynak modeli)
-            llm = ChatGroq(groq_api_key=groq_key, model_name="llama3-70b-8192")
+            llm = ChatGroq(groq_api_key=groq_key, model_name="llama-3.3-70b-versatile")
             
             arama_kelimeleri = kullanici_fikri[:40] + f" {sektor} benzeri projler"
             canli_veri = canli_arama_yap(arama_kelimeleri)
@@ -127,6 +131,7 @@ if st.button("🚀 Analizi ve Puanlamayı Başlat", type="primary", use_containe
                 st.markdown("### 🎯 Büyüme Stratejisi")
                 st.success(strateji_sonucu)
 
+            # PDF İndirme Butonu
             pdf_yolu = rapor_pdf_olustur(kullanici_fikri, rakip_sonucu, risk_sonucu, strateji_sonucu, final_rapor)
             with open(pdf_yolu, "rb") as pdf_file:
                 st.download_button(
@@ -137,6 +142,7 @@ if st.button("🚀 Analizi ve Puanlamayı Başlat", type="primary", use_containe
                     use_container_width=True
                 )
 
+            # Hafızaya Kaydetme
             su_an = datetime.datetime.now().strftime("%H:%M - %d.%m.%Y")
             st.session_state.gecmis.append({
                 "tarih": su_an,
